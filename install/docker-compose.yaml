@@ -1,0 +1,15 @@
+services:
+  egg:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: "1"
+      net.ipv6.conf.default.disable_ipv6: "1"
+    volumes:
+      - ../.container:/mnt/server
+    environment:
+      APPID: 1422450
+      STEAM_USER: ${STEAM_USER}
+      STEAM_PASS: ${STEAM_PASS}
+      STEAM_AUTH: ${STEAM_AUTH}

@@ -1,0 +1,23 @@
+services:
+  egg:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: "1"
+      net.ipv6.conf.default.disable_ipv6: "1"
+    volumes:
+      - ../.container:/home/container
+    environment:
+      SERVER_IP: 0.0.0.0
+      SERVER_PORT: 27015
+      MAP: dl_streets
+      PASSWORD: ""
+      APPID: 1422450
+      STEAM_USER: ${STEAM_USER}
+      STEAM_PASS: ""
+      STEAM_AUTH: ""
+      STARTUP: "/opt/proton/proton run ./game/bin/win64/deadlock.exe -dedicated -console -condebug -usercon -ip {{SERVER_IP}} -port {{SERVER_PORT}} -allow_no_lobby_connect -convars_visible_by_default -novid -nojoy -width 640 -height 480 +fps_max 30 +map {{MAP}} +sv_password {{PASSWORD}}"
+    ports:
+      - "27015:27015/udp"
+      - "27015:27015/tcp"

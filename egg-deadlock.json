@@ -1,0 +1,112 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PTERODACTYL PANEL - PTERODACTYL.IO",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2026-10-30T18:00:00-05:00",
+    "name": "Deadlock",
+    "author": "busheezy@badservers.net",
+    "description": "Deadlock dedicated server running the Windows build through GE-Proton.",
+    "features": [],
+    "docker_images": {
+        "Platform": "ghcr.io\/badserversnet\/sniper-deadlock-yolk:latest"
+    },
+    "file_denylist": [],
+    "startup": "\/opt\/proton\/proton run .\/game\/bin\/win64\/deadlock.exe -dedicated -console -condebug -usercon -ip 0.0.0.0 -port {{SERVER_PORT}} -allow_no_lobby_connect -convars_visible_by_default -novid -nojoy -width 640 -height 480 +fps_max 30 +map {{MAP}} +sv_password \"{{PASSWORD}}\"",
+    "config": {
+        "files": "{}",
+        "startup": "{\r\n    \"done\": \"Connection to Steam servers successful\"\r\n}",
+        "logs": "{}",
+        "stop": "^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!\/bin\/bash\r\nset -Eeuo pipefail\r\n\r\n# steamcmd Base Installation Script\r\n#\r\n# Server Files: \/mnt\/server\r\n\r\nSTEAMWORKS_REDIST_APPID=1007\r\nSTEAMWORKS_REDIST_DIR=\/mnt\/server\/steamworks-redist\r\n\r\nif [ -z \"${STEAM_USER:-}\" ] || [ \"${STEAM_USER}\" == \"anonymous\" ]; then\r\n  echo \"A Steam account that owns Deadlock is required. Set STEAM_USER.\" >&2\r\n  exit 1\r\nfi\r\n\r\n## download and install steamcmd\r\nmkdir -p \/mnt\/server\/steamcmd\r\ncurl --fail --show-error --silent --location \\\r\n  --output \/tmp\/steamcmd.tar.gz \\\r\n  https:\/\/steamcdn-a.akamaihd.net\/client\/installer\/steamcmd_linux.tar.gz\r\n\r\ntar -xzf \/tmp\/steamcmd.tar.gz -C \/mnt\/server\/steamcmd\r\n\r\nmkdir -p \/mnt\/server\/steamapps\r\n\r\ncd \/mnt\/server\/steamcmd\r\n\r\n# SteamCMD fails otherwise for some reason, even running as root.\r\n# This is changed at the end of the install process anyways.\r\nchown -R root:root \/mnt\r\nexport HOME=\/mnt\/server\r\n\r\n## install game using steamcmd\r\nsteam_login=(+login \"${STEAM_USER}\" \"${STEAM_PASS:-}\" \"${STEAM_AUTH:-}\")\r\nsteam_update=(+app_update \"${APPID}\")\r\n\r\nif [ \"${VALIDATE:-0}\" != \"0\" ]; then\r\n  steam_update+=(validate)\r\nfi\r\n\r\n.\/steamcmd.sh \\\r\n  +@sSteamCmdForcePlatformType windows \\\r\n  +force_install_dir \/mnt\/server \\\r\n  \"${steam_login[@]}\" \\\r\n  \"${steam_update[@]}\" \\\r\n  +quit | tee \/tmp\/steamcmd-install.log\r\n\r\nif ! grep -Fq \"Success! App '${APPID}' fully installed.\" \\\r\n  \/tmp\/steamcmd-install.log; then\r\n  echo \"SteamCMD did not report a completed app installation.\" >&2\r\n  exit 1\r\nfi\r\n\r\nif [ ! -f \/mnt\/server\/game\/bin\/win64\/deadlock.exe ]; then\r\n  echo \"SteamCMD finished without installing deadlock.exe.\" >&2\r\n  exit 1\r\nfi\r\n\r\n## install the Windows Steam client libraries used inside the Proton prefix\r\n.\/steamcmd.sh \\\r\n  +@sSteamCmdForcePlatformType windows \\\r\n  +force_install_dir \"${STEAMWORKS_REDIST_DIR}\" \\\r\n  +login anonymous \\\r\n  +app_update \"${STEAMWORKS_REDIST_APPID}\" \\\r\n  +quit | tee \/tmp\/steamcmd-redist.log\r\n\r\nif ! grep -Fq \"Success! App '${STEAMWORKS_REDIST_APPID}' fully installed.\" \\\r\n  \/tmp\/steamcmd-redist.log; then\r\n  echo \"SteamCMD did not report a completed Steamworks redistributable installation.\" >&2\r\n  exit 1\r\nfi\r\n\r\nif [ ! -f \"${STEAMWORKS_REDIST_DIR}\/steamclient64.dll\" ]; then\r\n  echo \"SteamCMD finished without installing steamclient64.dll.\" >&2\r\n  exit 1\r\nfi\r\n\r\n## set up 32 bit libraries\r\nmkdir -p \/mnt\/server\/.steam\/sdk32\r\ncp -v linux32\/steamclient.so \/mnt\/server\/.steam\/sdk32\/steamclient.so\r\n\r\n## set up 64 bit libraries\r\nmkdir -p \/mnt\/server\/.steam\/sdk64\r\ncp -v linux64\/steamclient.so \/mnt\/server\/.steam\/sdk64\/steamclient.so",
+            "container": "ghcr.io\/pterodactyl\/installers:debian",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "Map",
+            "description": "The default map for the server.",
+            "env_variable": "MAP",
+            "default_value": "dl_streets",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "App ID",
+            "description": "",
+            "env_variable": "APPID",
+            "default_value": "1422450",
+            "user_viewable": false,
+            "user_editable": false,
+            "rules": "required|integer",
+            "field_type": "text"
+        },
+        {
+            "name": "PASSWORD",
+            "description": "",
+            "env_variable": "PASSWORD",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "string|nullable",
+            "field_type": "text"
+        },
+        {
+            "name": "Steam Username",
+            "description": "Steam account that owns Deadlock. Required to download the game.",
+            "env_variable": "STEAM_USER",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:64",
+            "field_type": "text"
+        },
+        {
+            "name": "Steam Password",
+            "description": "Only needed for the first login. Clear it after SteamCMD has cached the login.",
+            "env_variable": "STEAM_PASS",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:128",
+            "field_type": "text"
+        },
+        {
+            "name": "Steam Guard Code",
+            "description": "Current Steam Guard code for the first login. Clear it after SteamCMD has cached the login.",
+            "env_variable": "STEAM_AUTH",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:16",
+            "field_type": "text"
+        },
+        {
+            "name": "Auto Update",
+            "description": "Update Deadlock with SteamCMD on every startup.",
+            "env_variable": "AUTO_UPDATE",
+            "default_value": "1",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|boolean",
+            "field_type": "text"
+        },
+        {
+            "name": "VALIDATE",
+            "description": "",
+            "env_variable": "VALIDATE",
+            "default_value": "0",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:20",
+            "field_type": "text"
+        }
+    ]
+}
