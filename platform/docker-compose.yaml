@@ -11,7 +11,7 @@ services:
     environment:
       SERVER_IP: 0.0.0.0
       SERVER_PORT: 27015
-      MAP: dl_streets
+      MAP: dl_midtown
       PASSWORD: ""
       APPID: 1422450
       STEAM_USER: ${STEAM_USER}

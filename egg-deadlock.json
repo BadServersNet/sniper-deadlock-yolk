@@ -32,7 +32,7 @@
             "name": "Map",
             "description": "The default map for the server.",
             "env_variable": "MAP",
-            "default_value": "dl_streets",
+            "default_value": "dl_midtown",
             "user_viewable": true,
             "user_editable": true,
             "rules": "required|string",

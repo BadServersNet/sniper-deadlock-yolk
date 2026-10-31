@@ -101,6 +101,15 @@ install_steam_client_dlls() {
   done
 }
 
+install_steam_client_libraries() {
+  local arch
+
+  for arch in 32 64; do
+    mkdir -p "/home/container/.steam/sdk${arch}"
+    cp -f -- "/home/container/steamcmd/linux${arch}/steamclient.so" "/home/container/.steam/sdk${arch}/steamclient.so"
+  done
+}
+
 start_virtual_display() {
   local display_number="${DISPLAY#:}"
 
@@ -115,11 +124,8 @@ follow_console_log() {
   tail -F -n +1 "${CONSOLE_LOG}" &
 }
 
-SteamAppId="${APPID:-1422450}"
-SteamGameId="${SteamAppId}"
-export SteamAppId SteamGameId
-
 mkdir -p "${STEAM_COMPAT_CLIENT_INSTALL_PATH}"
+install_steam_client_libraries
 install_steam_client_dlls
 start_virtual_display
 follow_console_log
