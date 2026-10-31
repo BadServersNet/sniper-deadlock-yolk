@@ -53,10 +53,28 @@ Proton does not pass stdin through either, so the launcher forwards each line
 typed in the panel console to the game over RCON on `127.0.0.1`. On every start
 it writes a random RCON password to `game/citadel/cfg/pterodactyl_rcon.cfg` and
 appends `+exec pterodactyl_rcon.cfg` to the startup arguments, which keeps the
-password out of the logged command line. Command output appears through
-`console.log`; RCON failures, such as a command sent before the server is ready,
-are printed by the launcher.
+password out of the logged command line. The launcher prints each RCON reply,
+because some output, such as Metamod's `meta` commands and unknown command
+errors, only goes to the RCON client. Engine output that also reaches
+`console.log` therefore appears twice. RCON failures, such as a command sent
+before the server is ready, are printed by the launcher.
 
 The server listens on the allocation port for game traffic (UDP) and RCON (TCP).
 The panel stops it with `quit`. `SIGINT` and `SIGTERM` are forwarded to Proton
 as `SIGTERM`.
+
+## Gameinfo patching
+
+Deadlock's `gameinfo.gi` has no `Mod` or `Write` search path, so the engine uses
+the first `Game` path for both. Metamod's install puts
+`Game citadel/addons/metamod` first, which makes the engine treat the Metamod
+folder as the game and fail with
+`Unable to read default keybinding configuration (user_keys_default)`.
+
+`PATCH_GAMEINFO_METAMOD` (default `0`) adds `Game citadel/addons/metamod`,
+`Mod citadel`, and `Write citadel` after the `Game_LowViolence` line of
+`game/citadel/gameinfo.gi` on every startup, after the SteamCMD update, so a
+Deadlock update that replaces the file does not remove them. It does not install
+Metamod. The patch removes existing copies of those lines and extra blank lines
+below the anchor before inserting them, so repeated startups leave the file
+unchanged. When disabled, `gameinfo.gi` is not modified.

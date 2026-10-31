@@ -107,6 +107,16 @@
             "user_editable": true,
             "rules": "required|string|max:20",
             "field_type": "text"
+        },
+        {
+            "name": "Patch Gameinfo for Metamod",
+            "description": "Adds citadel\/addons\/metamod, Mod citadel, and Write citadel to gameinfo.gi on startup. Does not install Metamod.",
+            "env_variable": "PATCH_GAMEINFO_METAMOD",
+            "default_value": "0",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|boolean",
+            "field_type": "text"
         }
     ]
 }

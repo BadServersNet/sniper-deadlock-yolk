@@ -138,10 +138,15 @@ class RconClient:
 
 def run_console_command(client: RconClient, command: str) -> None:
     try:
-        client.execute(command)
+        response = client.execute(command)
     except OSError as error:
         client.close()
         print(f"RCON command failed: {error}", flush=True)
+        return
+
+    output = response.rstrip()
+    if output:
+        print(output, flush=True)
 
 
 def forward_console(client: RconClient) -> None:

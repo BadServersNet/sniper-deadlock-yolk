@@ -42,6 +42,8 @@ STEAMWORKS_REDIST_DIR="/home/container/steamworks-redist"
 PREFIX_STEAM_DIR="${STEAM_COMPAT_DATA_PATH}/pfx/drive_c/Program Files (x86)/Steam"
 GAME_EXECUTABLE="/home/container/game/bin/win64/deadlock.exe"
 CONSOLE_LOG="/home/container/game/citadel/console.log"
+GAMEINFO_PATH="/home/container/game/citadel/gameinfo.gi"
+GAMEINFO_ANCHOR="Game_LowViolence"
 
 if [ -z "${STEAM_USER:-}" ] || [ "${STEAM_USER}" == "anonymous" ]; then
   echo "A Steam account that owns Deadlock is required. Set STEAM_USER." >&2
@@ -110,6 +112,86 @@ install_steam_client_libraries() {
   done
 }
 
+is_enabled() {
+  local value="${1,,}"
+
+  [[ "${value}" == "1" || "${value}" == "true" ]]
+}
+
+write_patched_gameinfo() {
+  local output_path="$1"
+
+  awk -v anchor="${GAMEINFO_ANCHOR}" '
+      function is_managed(line) {
+        return line ~ /^[[:space:]]*(Game[[:space:]]+citadel\/addons\/metamod|Mod[[:space:]]+citadel|Write[[:space:]]+citadel)[[:space:]]*\r?$/
+      }
+
+      function is_blank(line) {
+        return line ~ /^[[:space:]]*\r?$/
+      }
+
+      trimming && (is_blank($0) || is_managed($0)) {
+        if (is_blank($0)) {
+          saw_blank = 1
+        }
+        next
+      }
+
+      trimming {
+        trimming = 0
+        if (saw_blank) {
+          print eol
+        }
+      }
+
+      is_managed($0) {
+        next
+      }
+
+      {
+        print
+      }
+
+      !inserted && index($0, anchor) {
+        eol = /\r$/ ? "\r" : ""
+        print "\t\t\tGame\t\t\t\tcitadel/addons/metamod" eol
+        print "\t\t\tMod\t\t\t\tcitadel" eol
+        print "\t\t\tWrite\t\t\t\tcitadel" eol
+        inserted = 1
+        trimming = 1
+      }
+    ' "${GAMEINFO_PATH}" >"${output_path}"
+}
+
+patch_gameinfo() {
+  local patched_path="${GAMEINFO_PATH}.patched"
+
+  if ! is_enabled "${PATCH_GAMEINFO_METAMOD:-0}"; then
+    return 0
+  fi
+
+  if [[ ! -f "${GAMEINFO_PATH}" ]]; then
+    echo "gameinfo.gi was not found at ${GAMEINFO_PATH}; skipping gameinfo patch."
+    return 0
+  fi
+
+  if ! grep -qF "${GAMEINFO_ANCHOR}" "${GAMEINFO_PATH}"; then
+    echo "gameinfo.gi has no ${GAMEINFO_ANCHOR} line; skipping gameinfo patch."
+    return 0
+  fi
+
+  write_patched_gameinfo "${patched_path}"
+
+  if cmp -s "${GAMEINFO_PATH}" "${patched_path}"; then
+    rm -f -- "${patched_path}"
+    echo "gameinfo.gi is already patched for Metamod."
+    return 0
+  fi
+
+  mv -- "${patched_path}" "${GAMEINFO_PATH}"
+  echo "Patched gameinfo.gi for Metamod."
+}
+
 start_virtual_display() {
   local display_number="${DISPLAY#:}"
 
@@ -127,6 +209,7 @@ follow_console_log() {
 mkdir -p "${STEAM_COMPAT_CLIENT_INSTALL_PATH}"
 install_steam_client_libraries
 install_steam_client_dlls
+patch_gameinfo
 start_virtual_display
 follow_console_log
 
