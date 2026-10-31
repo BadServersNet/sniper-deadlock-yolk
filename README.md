@@ -47,8 +47,16 @@ shell script.
 Proton launches the game through its `steam.exe` helper, which does not pass the
 game's stdout through. The startup line uses `-condebug`, and the launcher
 truncates and follows `game/citadel/console.log` so the panel console shows the
-server output. Commands typed in the panel console do not reach the game; put
-convars in `game/citadel/cfg/server.cfg` or use RCON.
+server output.
+
+Proton does not pass stdin through either, so the launcher forwards each line
+typed in the panel console to the game over RCON on `127.0.0.1`. On every start
+it writes a random RCON password to `game/citadel/cfg/pterodactyl_rcon.cfg` and
+appends `+exec pterodactyl_rcon.cfg` to the startup arguments, which keeps the
+password out of the logged command line. Command output appears through
+`console.log`; RCON failures, such as a command sent before the server is ready,
+are printed by the launcher.
 
 The server listens on the allocation port for game traffic (UDP) and RCON (TCP).
-The panel stops it with `^C`.
+The panel stops it with `quit`. `SIGINT` and `SIGTERM` are forwarded to Proton
+as `SIGTERM`.
